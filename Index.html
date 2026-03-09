@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jogo do Ultimato</title>
+    <style>
+        /* Estilos e Cores do "App" */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a2e;
+            color: #ffffff;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            user-select: none; /* Evita selecionar o texto sem querer */
+        }
+        h1 {
+            font-size: 22px;
+            color: #e94560;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 3px;
+            background-color: #16213e;
+            padding: 8px;
+            border-radius: 12px;
+            touch-action: none; /* Trava a tela para o aluno poder arrastar o dedo no caça-palavras */
+            width: 100%;
+            max-width: 450px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .cell {
+            background-color: #0f3460;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: clamp(14px, 4vw, 20px);
+            aspect-ratio: 1;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        /* Cor quando o dedo passa por cima */
+        .cell.selected { background-color: #e94560; transform: scale(1.1); }
+        /* Cor quando acerta a palavra */
+        .cell.found { background-color: #4caf50; }
+        
+        #word-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 25px;
+            max-width: 450px;
+        }
+        .word {
+            background-color: #16213e;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .word.found {
+            text-decoration: line-through;
+            opacity: 0.5;
+            background-color: #4caf50;
+        }
+        #victory-message {
+            display: none;
+            margin-top: 25px;
+            font-size: 24px;
+            color: #4caf50;
+            font-weight: bold;
+            text-align: center;
+            animation: pop 0.5s ease-out;
+        }
+        @keyframes pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎯 Jogo do Ultimato</h1>
+    
+    <div id="game-board"></div>
+    <div id="word-list"></div>
+    <div id="victory-message">🎉 Parabéns! Você concluiu a negociação!</div>
+
+    <script>
+        // Lógica do Jogo
+        const gridData = [
+            ['N','E','G','O','C','I','A','C','A','O','P','B'],
+            ['M','R','E','C','E','P','T','O','R','L','R','D'],
+            ['P','R','O','P','O','S','I','T','O','R','O','F'],
+            ['K','U','L','T','I','M','A','T','O','X','P','H'],
+            ['A','F','H','T','Y','N','M','Q','W','Z','O','J'],
+            ['C','B','J','U','S','T','I','C','A','Y','S','K'],
+            ['E','N','D','I','V','I','S','A','O','L','T','X'],
+            ['I','R','E','C','U','S','A','R','M','P','A','V'],
+            ['T','Z','O','F','E','R','T','A','K','J','W','M'],
+            ['A','X','P','O','N','T','O','S','G','H','Q','Y'],
+            ['R','C','V','A','L','O','R','F','D','S','R','L'],
+            ['X','Z','T','Q','P','M','N','V','B','G','D','C']
+        ];
+        
+        const wordsToFind = ["ACEITAR", "DIVISAO", "JUSTICA", "NEGOCIACAO", "OFERTA", "PONTOS", "PROPOSITOR", "PROPOSTA", "RECEPTOR", "RECUSAR", "ULTIMATO", "VALOR"];
+        let wordsFoundCount = 0;
+
+        const boardEl = document.getElementById('game-board');
+        const listEl = document.getElementById('word-list');
+        const victoryEl = document.getElementById('victory-message');
+
+        // Renderizar lista de palavras
+        wordsToFind.forEach(word => {
+            let el = document.createElement('div');
+            el.className = 'word';
+            el.id = 'word-' + word;
+            el.innerText = word;
+            listEl.appendChild(el);
+        });
+
+        // Renderizar grade de letras
+        gridData.forEach((row, r) => {
+            row.forEach((letter, c) => {
+                let cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.letter = letter;
+                cell.innerText = letter;
+                boardEl.appendChild(cell);
+            });
+        });
+
+        // Controles de Arrastar/Touch
+        let isDragging = false;
+        let selectedCells = [];
+
+        function getCellFromEvent(e) {
+            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            let el = document.elementFromPoint(clientX, clientY);
+            return (el && el.classList.contains('cell')) ? el : null;
+        }
+
+        function startSelection(e) {
+            isDragging = true;
+            selectedCells = [];
+            document.querySelectorAll('.cell.selected').forEach(c => c.classList.remove('selected'));
+            let cell = getCellFromEvent(e);
+            if (cell) addCellToSelection(cell);
+            if(e.cancelable) e.preventDefault();
+        }
+
+        function dragSelection(e) {
+            if (!isDragging) return;
+            let cell = getCellFromEvent(e);
+            if (cell && !selectedCells.includes(cell)) {
+                addCellToSelection(cell);
+            }
+            if(e.cancelable) e.preventDefault();
+        }
+
+        function addCellToSelection(cell) {
+            selectedCells.push(cell);
+            cell.classList.add('selected');
+        }
+
+        function endSelection(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            // Verifica a palavra normal e de trás pra frente
+            let formedWord = selectedCells.map(c => c.dataset.letter).join('');
+            let reversedWord = selectedCells.map(c => c.dataset.letter).reverse().join('');
+
+            let matchedWord = wordsToFind.find(w => w === formedWord || w === reversedWord);
+            
+            if (matchedWord && !document.getElementById('word-' + matchedWord).classList.contains('found')) {
+                // Acertou a palavra!
+                selectedCells.forEach(c => {
+                    c.classList.remove('selected');
+                    c.classList.add('found');
+                });
+                document.getElementById('word-' + matchedWord).classList.add('found');
+                wordsFoundCount++;
+                
+                if (wordsFoundCount === wordsToFind.length) {
+                    victoryEl.style.display = 'block';
+                }
+            } else {
+                // Errou, apaga a seleção
+                selectedCells.forEach(c => c.classList.remove('selected'));
+            }
+        }
+
+        // Eventos para Mouse (Computador)
+        boardEl.addEventListener('mousedown', startSelection);
+        boardEl.addEventListener('mousemove', dragSelection);
+        window.addEventListener('mouseup', endSelection);
+
+        // Eventos para Touch (Celular)
+        boardEl.addEventListener('touchstart', startSelection, {passive: false});
+        boardEl.addEventListener('touchmove', dragSelection, {passive: false});
+        window.addEventListener('touchend', endSelection);
+    </script>
+</body>
+</html>
+
