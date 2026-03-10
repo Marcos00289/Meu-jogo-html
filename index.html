@@ -3,217 +3,390 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jogo do Ultimato</title>
+    <title>MasterClass: Negociação Avançada</title>
     <style>
-        /* Estilos e Cores do "App" */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1a1a2e;
-            color: #ffffff;
-            margin: 0;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            user-select: none; /* Evita selecionar o texto sem querer */
-        }
-        h1 {
-            font-size: 22px;
-            color: #e94560;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        #game-board {
-            display: grid;
-            grid-template-columns: repeat(12, 1fr);
-            gap: 3px;
-            background-color: #16213e;
-            padding: 8px;
-            border-radius: 12px;
-            touch-action: none; /* Trava a tela para o aluno poder arrastar o dedo no caça-palavras */
-            width: 100%;
-            max-width: 450px;
-            box-sizing: border-box;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-        .cell {
-            background-color: #0f3460;
-            color: #ffffff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            font-size: clamp(14px, 4vw, 20px);
-            aspect-ratio: 1;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-        /* Cor quando o dedo passa por cima */
-        .cell.selected { background-color: #e94560; transform: scale(1.1); }
-        /* Cor quando acerta a palavra */
+        /* Estilos Globais */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; height: 100vh; box-sizing: border-box; user-select: none; overflow: hidden; transition: background-color 0.5s; }
+        body.dark-mode { background-color: #1a1a2e; color: #ffffff; }
+
+        .app-container { background-color: #ffffff; width: 100%; max-width: 450px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 100%; transition: all 0.5s; }
+        body.dark-mode .app-container { background-color: transparent; box-shadow: none; }
+        .hidden { display: none !important; }
+
+        /* --- ESTILOS DO SIMULADOR --- */
+        .header { background-color: #0056b3; color: white; padding: 15px; text-align: center; border-radius: 15px 15px 0 0; }
+        .header h1 { margin: 0; font-size: 20px; }
+        
+        .status-bar { display: flex; justify-content: space-between; padding: 10px 15px; background-color: #e9ecef; font-weight: bold; font-size: 13px; }
+        .status-item { display: flex; flex-direction: column; align-items: center; width: 45%; }
+        .progress-bg { width: 100%; background-color: #ccc; border-radius: 10px; height: 8px; margin-top: 5px; overflow: hidden; }
+        .progress-fill { height: 100%; transition: width 0.4s; }
+        #val-fill { background-color: #28a745; width: 50%; }
+        #rel-fill { background-color: #17a2b8; width: 50%; }
+
+        .chat-area { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background-color: #f8f9fa; }
+        .message { padding: 12px; border-radius: 10px; line-height: 1.4; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); animation: fadeIn 0.3s; }
+        .client-msg { background-color: #e3f2fd; border-left: 4px solid #2196f3; }
+        .system-msg { background-color: #fff3cd; border-left: 4px solid #ffc107; font-style: italic; font-size: 13px; text-align: center; }
+        
+        .options-area { padding: 15px; background-color: #ffffff; border-top: 1px solid #ddd; display: flex; flex-direction: column; gap: 8px; border-radius: 0 0 15px 15px; overflow-y: auto; max-height: 40%;}
+        button.option-btn { background-color: #0056b3; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: background 0.2s; text-align: left; line-height: 1.3; }
+        button.option-btn:active { transform: scale(0.98); }
+        button.action-btn { background-color: #28a745; color: white; font-weight: bold; padding: 15px; border-radius: 10px; border: none; cursor: pointer; text-align: center; font-size: 16px; margin-top: 10px; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+        /* --- ESTILOS DO CAÇA-PALAVRAS --- */
+        #ws-header { display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px; font-size: 16px; font-weight: bold; color: white; padding: 0 10px; box-sizing: border-box;}
+        #timer { color: #4caf50; transition: color 0.3s; }
+        .danger-time { color: #ff3b30 !important; animation: pulse 1s infinite; }
+        
+        #game-board { display: grid; grid-template-columns: repeat(15, 1fr); gap: 2px; background-color: #16213e; padding: 6px; border-radius: 12px; touch-action: none; width: 100%; box-sizing: border-box; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .cell { background-color: #0f3460; color: #ffffff; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: clamp(12px, 3.5vw, 18px); aspect-ratio: 1; border-radius: 4px; cursor: pointer; }
+        .cell.selected { background-color: #e94560; transform: scale(1.1); border-radius: 8px; z-index: 2; }
         .cell.found { background-color: #4caf50; }
         
-        #word-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-            margin-top: 25px;
-            max-width: 450px;
-        }
-        .word {
-            background-color: #16213e;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-        .word.found {
-            text-decoration: line-through;
-            opacity: 0.5;
-            background-color: #4caf50;
-        }
-        #victory-message {
-            display: none;
-            margin-top: 25px;
-            font-size: 24px;
-            color: #4caf50;
-            font-weight: bold;
-            text-align: center;
-            animation: pop 0.5s ease-out;
-        }
-        @keyframes pop {
-            0% { transform: scale(0.5); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
+        #word-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 15px; overflow-y: auto; padding-bottom: 20px;}
+        .word { background-color: #16213e; padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; transition: all 0.3s; color: white; }
+        .word.found { text-decoration: line-through; opacity: 0.4; background-color: #4caf50; }
+
+        #ws-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(26, 26, 46, 0.98); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; padding: 20px; box-sizing: border-box; text-align: center; }
+        .overlay-title { font-size: 26px; color: #e94560; margin-bottom: 10px; font-weight: bold; }
+        .overlay-text { font-size: 15px; margin-bottom: 25px; line-height: 1.5; color: #ddd; max-width: 400px; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <h1>🎯 Jogo do Ultimato</h1>
-    
-    <div id="game-board"></div>
-    <div id="word-list"></div>
-    <div id="victory-message">🎉 Parabéns! Você concluiu a negociação!</div>
+    <div class="app-container" id="sim-container">
+        <div class="header" id="sim-header"><h1>Negociação B2B: Modo Hard</h1></div>
+        
+        <div class="chat-area" id="start-screen" style="justify-content: center; text-align: center;">
+            <h2>O Desafio</h2>
+            <p>Você está frente a frente com a Diretora de uma grande empresa.</p>
+            <p>Escolha a psicologia certa: seja <b>assertivo</b>. Opções agressivas destroem o <i>Relacionamento</i>. Opções passivas destroem o <i>Valor</i>.</p>
+            <button class="action-btn" onclick="startSimulator()" style="background-color: #0056b3;">Iniciar Reunião</button>
+        </div>
+
+        <div id="game-screen" class="hidden" style="display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;">
+            <div class="status-bar">
+                <div class="status-item">
+                    <span>Percepção de Valor</span>
+                    <div class="progress-bg"><div class="progress-fill" id="val-fill"></div></div>
+                </div>
+                <div class="status-item">
+                    <span>Relacionamento (Rapport)</span>
+                    <div class="progress-bg"><div class="progress-fill" id="rel-fill"></div></div>
+                </div>
+            </div>
+            <div class="chat-area" id="chat-history"></div>
+            <div class="options-area" id="options-container"></div>
+        </div>
+    </div>
+
+    <div id="ws-overlay" class="hidden">
+        <div class="overlay-title" id="overlay-title">Fase Bônus: Fixação</div>
+        <div class="overlay-text" id="overlay-text">
+            Encontre os 10 conceitos aplicados nesta simulação.<br><br>
+            ⚠️ <b>Atenção:</b> Horizontal, vertical, diagonal e trás pra frente!<br>
+            Você tem <b>4 minutos</b>.
+        </div>
+        <button class="action-btn" id="start-ws-btn" style="background-color: #e94560; max-width: 300px;">Iniciar Caça-Palavras</button>
+    </div>
+
+    <div class="app-container hidden" id="ws-container">
+        <h1 style="color: #e94560; text-align: center; margin: 5px 0 10px 0; font-size: 18px;">🎯 Conceitos-Chave</h1>
+        <div id="ws-header">
+            <div id="score">0 / 10</div>
+            <div id="timer">⏳ 04:00</div>
+        </div>
+        <div id="game-board"></div>
+        <div id="word-list"></div>
+    </div>
 
     <script>
-        // Lógica do Jogo
-        const gridData = [
-            ['N','E','G','O','C','I','A','C','A','O','P','B'],
-            ['M','R','E','C','E','P','T','O','R','L','R','D'],
-            ['P','R','O','P','O','S','I','T','O','R','O','F'],
-            ['K','U','L','T','I','M','A','T','O','X','P','H'],
-            ['A','F','H','T','Y','N','M','Q','W','Z','O','J'],
-            ['C','B','J','U','S','T','I','C','A','Y','S','K'],
-            ['E','N','D','I','V','I','S','A','O','L','T','X'],
-            ['I','R','E','C','U','S','A','R','M','P','A','V'],
-            ['T','Z','O','F','E','R','T','A','K','J','W','M'],
-            ['A','X','P','O','N','T','O','S','G','H','Q','Y'],
-            ['R','C','V','A','L','O','R','F','D','S','R','L'],
-            ['X','Z','T','Q','P','M','N','V','B','G','D','C']
+        /* =========================================
+           LÓGICA DO SIMULADOR (ROTAS EXPANDIDAS)
+           ========================================= */
+        let valor = 50, relacionamento = 50, currentStep = 0;
+        const valFill = document.getElementById('val-fill');
+        const relFill = document.getElementById('rel-fill');
+        const chatHistory = document.getElementById('chat-history');
+        const optionsContainer = document.getElementById('options-container');
+
+        // Roteiro com 6 Fases e 3 opções (Agressiva, Passiva e Assertiva)
+        const story = [
+            {
+                concept: "Fase 1: Psicologia da Abertura e Rapport", 
+                text: "Cliente: Olá. Meu dia está uma loucura, tivemos um problema no servidor. Tenho só 15 minutos para você me provar que o seu sistema vale a pena.",
+                options: [
+                    { text: "A) (Passiva) 'Me desculpe incomodar! Se quiser, remarcamos para quando você estiver mais calma.'", valMod: -20, relMod: -10, next: 1, feedback: "O cliente assumiu o controle. Você demonstrou insegurança e perdeu a janela de oportunidade de vender." },
+                    { text: "B) (Agressiva) 'Entendo, serei rápido. Nosso sistema é líder de mercado e custa R$ 15.000, olha só a tela inicial...'", valMod: -10, relMod: -25, next: 1, feedback: "Faltou empatia! Você ignorou o estresse dela e vomitou características técnicas. O Rapport foi destruído." },
+                    { text: "C) (Assertiva) 'Compreendo o estresse com o servidor. Prometo ser objetivo. Para aproveitarmos esses 15 minutos, qual processo hoje mais atrasa sua equipe?'", valMod: 15, relMod: 20, next: 1, feedback: "Perfeito! Você validou a emoção (empatia) e retomou o controle com uma pergunta aberta focada na dor." }
+                ]
+            },
+            {
+                concept: "Fase 2: Investigação (Diagnóstico da Dor)", 
+                text: "Cliente: O que mais atrasa minha equipe hoje é a geração de contratos. Fazemos tudo no Word e sempre tem erro de digitação.",
+                options: [
+                    { text: "A) (Assertiva) 'E qual o impacto financeiro quando um contrato vai com erro para o cliente final?'", valMod: 25, relMod: 10, next: 2, feedback: "Genial! Ao perguntar o impacto financeiro, o próprio cliente verbaliza o tamanho do prejuízo. O valor da sua solução dispara." },
+                    { text: "B) (Passiva) 'Nossa, que chato! Mas fique tranquila, nosso sistema resolve isso.'", valMod: -15, relMod: 5, next: 2, feedback: "Resposta genérica e fraca. Você não aprofundou o problema e perdeu a chance de ancorar o valor." },
+                    { text: "C) (Agressiva) 'Fazer no Word em 2026 é amadorismo. Vocês estão perdendo dinheiro à toa.'", valMod: 10, relMod: -30, next: 2, feedback: "Você ofendeu o processo da empresa! Mesmo estando certo tecnicamente, a ofensa afunda o relacionamento." }
+                ]
+            },
+            {
+                concept: "Fase 3: Ancoragem e Apresentação de Valor", 
+                text: "Cliente: Esses erros geram retrabalho e a gente perde uns R$ 5.000 por mês em multas contratuais. Como sua ferramenta ajuda e quanto custa?",
+                options: [
+                    { text: "A) (Agressiva) 'Custa R$ 12.000 à vista e automatiza tudo. É pegar ou largar.'", valMod: 0, relMod: -20, next: 3, feedback: "Sua pressa passou arrogância e espantou a cliente." },
+                    { text: "B) (Assertiva) 'Se vocês perdem R$ 5.000/mês, são R$ 60.000/ano em multas. Nosso sistema zera esse erro por um investimento de apenas R$ 12.000 anuais.'", valMod: 30, relMod: 15, next: 3, feedback: "Mestre da Ancoragem! Você comparou o seu preço (R$12k) com o prejuízo dela (R$60k). O seu sistema deixou de ser custo e virou lucro." },
+                    { text: "C) (Passiva) 'O valor normal é R$ 12.000, mas para você eu consigo fazer por R$ 9.000 hoje.'", valMod: -25, relMod: 0, next: 3, feedback: "Você deu desconto antes mesmo dela pedir! Isso mostra insegurança com o próprio produto." }
+                ]
+            },
+            {
+                concept: "Fase 4: Lidando com Objeções (A Concorrência)", 
+                text: "Cliente: O ROI faz sentido. Mas a Empresa X (sua concorrente) me ofereceu uma solução parecida por R$ 8.000.",
+                options: [
+                    { text: "A) (Passiva) 'Se eles fizeram R$ 8.000, eu cubro a oferta e faço por R$ 7.500.'", valMod: -30, relMod: 10, next: 4, feedback: "Leilão de preços! Você destruiu sua margem de lucro e transformou seu produto em commodity." },
+                    { text: "B) (Agressiva) 'A Empresa X tem um suporte terrível e o sistema deles cai toda hora. O barato sai caro.'", valMod: -10, relMod: -15, next: 4, feedback: "Falar mal da concorrência soa antiético e defensivo." },
+                    { text: "C) (Assertiva) 'Entendo. A Empresa X foca em baixo custo. Nós focamos em estabilidade: nosso contrato garante 99.9% de uptime para você não ter multas. Você prefere risco ou segurança?'", valMod: 20, relMod: 10, next: 4, feedback: "Isolamento elegante! Você reposicionou a concorrência sem ofender, destacando o seu diferencial." }
+                ]
+            },
+            {
+                concept: "Fase 5: Concessão Estratégica", 
+                text: "Cliente: Realmente, segurança é nossa prioridade. Vamos fechar nos R$ 12.000, mas eu preciso que vocês isentem a taxa de implementação de R$ 2.000. Pode ser?",
+                options: [
+                    { text: "A) (Assertiva) 'Eu isento a taxa de R$ 2.000, desde que possamos assinar o contrato de exclusividade por 2 anos.'", valMod: 20, relMod: 15, next: 5, feedback: "A regra de ouro: nunca ceda nada de graça. A troca condicional fortalece a parceria." },
+                    { text: "B) (Agressiva) 'Impossível. Meu preço já é o melhor. Não tiro nem um centavo da implementação.'", valMod: 0, relMod: -25, next: 5, feedback: "A inflexibilidade na reta final pode melar um negócio que já estava ganho." },
+                    { text: "C) (Passiva) 'Claro, eu tiro a taxa para você! O importante é fecharmos a parceria.'", valMod: -20, relMod: 5, next: 5, feedback: "Concessão unilateral. Ela pediu e você obedeceu. O cliente percebeu que você tem margem sobrando." }
+                ]
+            },
+            {
+                concept: "Fase 6: O Fechamento Assuntivo", 
+                text: "Cliente: Acordo fechado! O contrato de 2 anos faz sentido para nós com essa isenção.",
+                options: [
+                    { text: "A) (Passiva) 'Nossa, muito obrigado! Você quer pensar mais um pouco sobre a data de início ou posso mandar o contrato?'", valMod: -15, relMod: -5, next: 6, feedback: "Por que mandar ela pensar de novo? Você abriu margem para ela desistir no último segundo." },
+                    { text: "B) (Agressiva) 'Ótimo, passa o cartão ou vai ser no boleto?'", valMod: 0, relMod: -20, next: 6, feedback: "Falta de polidez em uma negociação B2B corporativa." },
+                    { text: "C) (Assertiva) 'Excelente negócio. Vou enviar o contrato para sua assinatura digital agora, e já agendo a reunião de kickoff para terça-feira, ok?'", valMod: 15, relMod: 15, next: 6, feedback: "Fechamento Direto e Assuntivo. Você tomou a liderança e guiou para os próximos passos práticos." }
+                ]
+            }
         ];
+
+        function startSimulator() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            updateBars(); renderStep();
+        }
+
+        function updateBars() {
+            valor = Math.max(0, Math.min(100, valor));
+            relacionamento = Math.max(0, Math.min(100, relacionamento));
+            valFill.style.width = valor + '%'; relFill.style.width = relacionamento + '%';
+            valFill.style.backgroundColor = valor < 30 ? '#dc3545' : '#28a745';
+            relFill.style.backgroundColor = relacionamento < 30 ? '#dc3545' : '#17a2b8';
+        }
+
+        function addMessage(text, type) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${type}`; msgDiv.innerHTML = text;
+            chatHistory.appendChild(msgDiv);
+            setTimeout(() => chatHistory.scrollTop = chatHistory.scrollHeight, 50);
+        }
+
+        function renderStep() {
+            optionsContainer.innerHTML = '';
+            if (currentStep >= story.length) { finishGame(); return; }
+            const step = story[currentStep];
+            addMessage(`<b>${step.concept}</b>`, 'system-msg');
+            setTimeout(() => {
+                addMessage(step.text, 'client-msg');
+                // Embaralhar botões para A, B e C não ficarem na mesma ordem sempre
+                let shuffledOptions = [...step.options].sort(() => Math.random() - 0.5);
+                shuffledOptions.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn'; btn.innerText = opt.text;
+                    btn.onclick = () => handleChoice(opt);
+                    optionsContainer.appendChild(btn);
+                });
+            }, 600);
+        }
+
+        function handleChoice(opt) {
+            valor += opt.valMod; relacionamento += opt.relMod; updateBars();
+            optionsContainer.innerHTML = '';
+            addMessage(`<i>Você escolheu:</i><br>${opt.text.substring(13)}`, 'system-msg'); // Remove o "A) (Assertiva)" do texto visível
+            setTimeout(() => {
+                addMessage(`💡 <b>Feedback:</b> ${opt.feedback}`, 'system-msg');
+                currentStep = opt.next;
+                setTimeout(renderStep, 2000);
+            }, 800);
+        }
+
+        function finishGame() {
+            let finalMsg = valor >= 75 && relacionamento >= 75 ? "🏆 <b>NEGOCIADOR ELITE!</b> Você não cedeu sob pressão, manteve a ancoragem e garantiu o lucro construindo rapport." :
+                           valor >= 45 && relacionamento >= 45 ? "🤝 <b>NEGÓCIO FECHADO.</b> Você sobreviveu, mas cedeu valor ou machucou a relação. Cuidado com o leilão de preços." :
+                           "❌ <b>NEGÓCIO PERDIDO!</b> Respostas passivas ou agressivas destruíram a confiança ou a rentabilidade do projeto.";
+            
+            setTimeout(() => {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'message'; msgDiv.style.backgroundColor = "#fff";
+                msgDiv.innerHTML = finalMsg + `<br><br><button class='action-btn' onclick='transitionToWordSearch()'>Ir para a Revisão Final ➡️</button>`;
+                chatHistory.appendChild(msgDiv);
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }, 1000);
+        }
+
+        /* =========================================
+           TRANSIÇÃO E CAÇA-PALAVRAS
+           ========================================= */
+        function transitionToWordSearch() {
+            document.getElementById('sim-container').classList.add('hidden');
+            document.getElementById('ws-overlay').classList.remove('hidden');
+            document.body.classList.add('dark-mode');
+        }
+
+        const wsWords = ["ANCORAGEM", "EMPATIA", "RAPPORT", "OBJECAO", "CONCESSAO", "VALOR", "DIAGNOSTICO", "ASSERTIVO", "LUCRO", "FECHAMENTO"];
+        const gridSize = 15;
+        const decoyLetters = "ABCDEFGHILMNOPQRSTUV"; 
         
-        const wordsToFind = ["ACEITAR", "DIVISAO", "JUSTICA", "NEGOCIACAO", "OFERTA", "PONTOS", "PROPOSITOR", "PROPOSTA", "RECEPTOR", "RECUSAR", "ULTIMATO", "VALOR"];
-        let wordsFoundCount = 0;
+        let grid = [], wordsFoundCount = 0, timeLeft = 240, timerInterval, isPlaying = false;
+        const boardEl = document.getElementById('game-board'); const listEl = document.getElementById('word-list');
+        const scoreEl = document.getElementById('score'); const timerEl = document.getElementById('timer');
+        const wsOverlay = document.getElementById('ws-overlay');
 
-        const boardEl = document.getElementById('game-board');
-        const listEl = document.getElementById('word-list');
-        const victoryEl = document.getElementById('victory-message');
+        document.getElementById('start-ws-btn').addEventListener('click', startWordSearch);
 
-        // Renderizar lista de palavras
-        wordsToFind.forEach(word => {
-            let el = document.createElement('div');
-            el.className = 'word';
-            el.id = 'word-' + word;
-            el.innerText = word;
-            listEl.appendChild(el);
-        });
+        function generateGrid() {
+            grid = Array(gridSize).fill(null).map(() => Array(gridSize).fill(''));
+            const dirs = [[0,1], [1,0], [1,1], [1,-1], [0,-1], [-1,0], [-1,-1], [-1,1]];
+            wsWords.forEach(word => {
+                let placed = false, attempts = 0;
+                while (!placed && attempts < 300) {
+                    attempts++;
+                    let d = dirs[Math.floor(Math.random() * dirs.length)];
+                    let r = Math.floor(Math.random() * gridSize), c = Math.floor(Math.random() * gridSize);
+                    let rEnd = r + d[0] * (word.length - 1), cEnd = c + d[1] * (word.length - 1);
 
-        // Renderizar grade de letras
-        gridData.forEach((row, r) => {
-            row.forEach((letter, c) => {
-                let cell = document.createElement('div');
-                cell.className = 'cell';
-                cell.dataset.letter = letter;
-                cell.innerText = letter;
-                boardEl.appendChild(cell);
+                    if (rEnd >= 0 && rEnd < gridSize && cEnd >= 0 && cEnd < gridSize) {
+                        let canPlace = true;
+                        for (let i = 0; i < word.length; i++) {
+                            if (grid[r + d[0] * i][c + d[1] * i] !== '' && grid[r + d[0] * i][c + d[1] * i] !== word[i]) { canPlace = false; break; }
+                        }
+                        if (canPlace) {
+                            for (let i = 0; i < word.length; i++) grid[r + d[0] * i][c + d[1] * i] = word[i];
+                            placed = true;
+                        }
+                    }
+                }
             });
-        });
+            for(let r=0; r<gridSize; r++) {
+                for(let c=0; c<gridSize; c++) {
+                    if(grid[r][c] === '') grid[r][c] = decoyLetters[Math.floor(Math.random() * decoyLetters.length)];
+                }
+            }
+        }
 
-        // Controles de Arrastar/Touch
-        let isDragging = false;
-        let selectedCells = [];
+        function renderWordSearch() {
+            boardEl.innerHTML = ''; listEl.innerHTML = '';
+            wsWords.forEach(word => {
+                let el = document.createElement('div');
+                el.className = 'word'; el.id = 'word-' + word; el.innerText = word;
+                listEl.appendChild(el);
+            });
+            for(let r=0; r<gridSize; r++) {
+                for(let c=0; c<gridSize; c++) {
+                    let cell = document.createElement('div');
+                    cell.className = 'cell'; cell.dataset.r = r; cell.dataset.c = c; cell.dataset.letter = grid[r][c]; cell.innerText = grid[r][c];
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
 
-        function getCellFromEvent(e) {
-            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            let el = document.elementFromPoint(clientX, clientY);
-            return (el && el.classList.contains('cell')) ? el : null;
+        function startWordSearch() {
+            wsOverlay.classList.add('hidden'); document.getElementById('ws-container').classList.remove('hidden');
+            wordsFoundCount = 0; timeLeft = 240; scoreEl.innerText = `0 / ${wsWords.length}`;
+            timerEl.classList.remove('danger-time'); updateTimerDisplay();
+            generateGrid(); renderWordSearch();
+            isPlaying = true; clearInterval(timerInterval); timerInterval = setInterval(timerTick, 1000);
+        }
+
+        function timerTick() {
+            if (!isPlaying) return;
+            timeLeft--; updateTimerDisplay();
+            if(timeLeft === 30) timerEl.classList.add('danger-time');
+            if (timeLeft <= 0) endWordSearch(false);
+        }
+
+        function updateTimerDisplay() {
+            timerEl.innerText = `⏳ ${Math.floor(timeLeft / 60).toString().padStart(2, '0')}:${(timeLeft % 60).toString().padStart(2, '0')}`;
+        }
+
+        function endWordSearch(victory) {
+            isPlaying = false; clearInterval(timerInterval);
+            wsOverlay.classList.remove('hidden');
+            document.getElementById('start-ws-btn').innerText = "Tentar Novamente";
+            document.getElementById('ws-container').classList.add('hidden');
+            if(victory) {
+                document.getElementById('overlay-title').innerText = "🎉 Aula Concluída!";
+                document.getElementById('overlay-title').style.color = "#4caf50";
+                document.getElementById('overlay-text').innerHTML = `Você dominou a negociação e achou as palavras faltando <b>${timeLeft} segundos</b>!`;
+            } else {
+                document.getElementById('overlay-title').innerText = "⏰ Tempo Esgotado!";
+                document.getElementById('overlay-title').style.color = "#ff3b30";
+                document.getElementById('overlay-text').innerHTML = `Faltaram ${wsWords.length - wordsFoundCount} conceitos.`;
+            }
+        }
+
+        let isDragging = false, startR = -1, startC = -1, selectedCells = [];
+        function getCell(e) {
+            let cx = e.touches ? e.touches[0].clientX : e.clientX, cy = e.touches ? e.touches[0].clientY : e.clientY;
+            let el = document.elementFromPoint(cx, cy); return (el && el.classList.contains('cell')) ? el : null;
         }
 
         function startSelection(e) {
-            isDragging = true;
-            selectedCells = [];
-            document.querySelectorAll('.cell.selected').forEach(c => c.classList.remove('selected'));
-            let cell = getCellFromEvent(e);
-            if (cell) addCellToSelection(cell);
-            if(e.cancelable) e.preventDefault();
+            if(!isPlaying) return;
+            let cell = getCell(e); if (!cell) return;
+            isDragging = true; startR = parseInt(cell.dataset.r); startC = parseInt(cell.dataset.c);
+            clearSelection(); selectCell(cell); if(e.cancelable) e.preventDefault();
         }
 
         function dragSelection(e) {
-            if (!isDragging) return;
-            let cell = getCellFromEvent(e);
-            if (cell && !selectedCells.includes(cell)) {
-                addCellToSelection(cell);
+            if (!isDragging || !isPlaying) return;
+            let cell = getCell(e); if (!cell) return;
+            let dr = parseInt(cell.dataset.r) - startR, dc = parseInt(cell.dataset.c) - startC;
+            if (dr === 0 || dc === 0 || Math.abs(dr) === Math.abs(dc)) {
+                clearSelection();
+                let steps = Math.max(Math.abs(dr), Math.abs(dc));
+                let stepR = dr === 0 ? 0 : (dr > 0 ? 1 : -1), stepC = dc === 0 ? 0 : (dc > 0 ? 1 : -1);
+                for(let i = 0; i <= steps; i++) {
+                    let targetCell = document.querySelector(`.cell[data-r="${startR + (i * stepR)}"][data-c="${startC + (i * stepC)}"]`);
+                    if(targetCell) selectCell(targetCell);
+                }
             }
             if(e.cancelable) e.preventDefault();
         }
 
-        function addCellToSelection(cell) {
-            selectedCells.push(cell);
-            cell.classList.add('selected');
-        }
+        function clearSelection() { selectedCells.forEach(c => c.classList.remove('selected')); selectedCells = []; }
+        function selectCell(cell) { selectedCells.push(cell); cell.classList.add('selected'); }
 
         function endSelection(e) {
-            if (!isDragging) return;
+            if (!isDragging || !isPlaying) return;
             isDragging = false;
+            let wordStr = selectedCells.map(c => c.dataset.letter).join(''), revWordStr = selectedCells.map(c => c.dataset.letter).reverse().join('');
+            let match = wsWords.find(w => w === wordStr || w === revWordStr);
+            let wordEl = match ? document.getElementById('word-' + match) : null;
             
-            // Verifica a palavra normal e de trás pra frente
-            let formedWord = selectedCells.map(c => c.dataset.letter).join('');
-            let reversedWord = selectedCells.map(c => c.dataset.letter).reverse().join('');
-
-            let matchedWord = wordsToFind.find(w => w === formedWord || w === reversedWord);
-            
-            if (matchedWord && !document.getElementById('word-' + matchedWord).classList.contains('found')) {
-                // Acertou a palavra!
-                selectedCells.forEach(c => {
-                    c.classList.remove('selected');
-                    c.classList.add('found');
-                });
-                document.getElementById('word-' + matchedWord).classList.add('found');
-                wordsFoundCount++;
-                
-                if (wordsFoundCount === wordsToFind.length) {
-                    victoryEl.style.display = 'block';
-                }
-            } else {
-                // Errou, apaga a seleção
-                selectedCells.forEach(c => c.classList.remove('selected'));
-            }
+            if (match && wordEl && !wordEl.classList.contains('found')) {
+                selectedCells.forEach(c => { c.classList.remove('selected'); c.classList.add('found'); });
+                wordEl.classList.add('found'); wordsFoundCount++; scoreEl.innerText = `${wordsFoundCount} / ${wsWords.length}`;
+                if (wordsFoundCount === wsWords.length) setTimeout(() => endWordSearch(true), 500);
+            } else { clearSelection(); }
         }
 
-        // Eventos para Mouse (Computador)
-        boardEl.addEventListener('mousedown', startSelection);
-        boardEl.addEventListener('mousemove', dragSelection);
-        window.addEventListener('mouseup', endSelection);
-
-        // Eventos para Touch (Celular)
-        boardEl.addEventListener('touchstart', startSelection, {passive: false});
-        boardEl.addEventListener('touchmove', dragSelection, {passive: false});
-        window.addEventListener('touchend', endSelection);
+        boardEl.addEventListener('mousedown', startSelection); boardEl.addEventListener('mousemove', dragSelection); window.addEventListener('mouseup', endSelection);
+        boardEl.addEventListener('touchstart', startSelection, {passive: false}); boardEl.addEventListener('touchmove', dragSelection, {passive: false}); window.addEventListener('touchend', endSelection);
     </script>
 </body>
 </html>
+
 
